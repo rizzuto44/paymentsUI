@@ -23,7 +23,6 @@ type TokenOption = {
 export function MintPanel() {
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   
   const { address, isConnected } = useAccount();
@@ -74,11 +73,14 @@ export function MintPanel() {
 
   useEffect(() => {
     setMounted(true);
-    // Auto-select the token with highest balance when balances are loaded
+  }, []);
+
+  // Auto-select token with highest balance
+  useEffect(() => {
     if (tokenOptions.length > 0 && !selectedToken) {
       setSelectedToken(tokenOptions[0].id);
     }
-  }, [baseBalance, arbitrumBalance]);
+  }, [tokenOptions, selectedToken]);
 
   // Format number with commas and 2 decimal places
   const formatBalance = (balance: string) => {
@@ -90,7 +92,7 @@ export function MintPanel() {
   };
 
   // Combined loading state
-  const isMinting = isPending || isConfirming || isLoading;
+  const isMinting = isPending || isConfirming;
 
   // Handle transaction success/error
   useEffect(() => {

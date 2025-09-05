@@ -5,17 +5,50 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from '@/components/ui/command';
-import { useAccount, useChainId, useSwitchChain, useBalance, useWaitForTransactionReceipt } from 'wagmi';
-import { simulateContract, writeContract } from '@wagmi/core';
-import { config } from '@/lib/wagmi';
+
+import { useAccount, useChainId, useSwitchChain, useWaitForTransactionReceipt, useBalance } from 'wagmi';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import { CONSTANTS, NETWORK_CONFIG, CONTRACTS, type ChainKey, type UsernameRecord } from '@/lib/constants';
-import { formatUnits, parseUnits, erc20Abi, isAddress, getAddress } from 'viem';
+import { getContractConfig } from '@/lib/contracts';
+import { parseUnits, formatUnits, erc20Abi, isAddress, getAddress } from 'viem';
+import { simulateContract, writeContract } from '@wagmi/core';
+import { config } from '@/lib/wagmi';
 import { toast } from 'sonner';
 import { searchUsers } from '@/lib/username';
-import { getContractConfig, type SendParam, type MessagingFee } from '@/lib/contracts';
-import { Check } from 'lucide-react';
+// Helper function to convert address to bytes32 - with validation
+const addressToBytes32 = (address: string): `0x${string}` => {
+  // Validate input address
+  if (!address || typeof address !== 'string') {
+    throw new Error(`Invalid address: ${address}`);
+  }
+  
+  // Ensure address starts with 0x (preserve original case)
+  const normalizedAddress = address.startsWith('0x') 
+    ? address 
+    : `0x${address}`;
+  
+  // Validate hex format and length (case-insensitive)
+  const hexPattern = /^0x[0-9a-fA-F]{40}$/;
+  if (!hexPattern.test(normalizedAddress)) {
+    console.error('❌ Address validation failed:', {
+      originalAddress: address,
+      normalizedAddress: normalizedAddress,
+      addressLength: normalizedAddress.length,
+      expectedLength: 42, // 0x + 40 hex chars
+      actualHexLength: normalizedAddress.slice(2).length,
+      expectedHexLength: 40,
+      addressChars: normalizedAddress.slice(2).split('')
+    });
+    throw new Error(`Invalid address format: ${address} -> ${normalizedAddress}`);
+  }
+  
+  // Remove 0x prefix and pad to 64 characters (32 bytes) - preserve case
+  const cleanAddress = normalizedAddress.slice(2);
+  const paddedAddress = cleanAddress.padStart(64, '0');
+  
+  // Return as hex string
+  return `0x${paddedAddress}` as `0x${string}`;
+};
 
 type TokenOption = {
   id: string;
@@ -88,12 +121,15 @@ export function SendPanel() {
 
   useEffect(() => {
     setMounted(true);
-    // Auto-select the token with highest balance when balances are loaded
+  }, []);
+
+  // Auto-select token with highest balance
+  useEffect(() => {
     if (tokenOptions.length > 0 && !selectedToken) {
       console.log('🎯 Auto-selecting token:', tokenOptions[0]);
       setSelectedToken(tokenOptions[0].id);
     }
-  }, [baseBalance, arbitrumBalance]);
+  }, [tokenOptions, selectedToken]);
 
 
 
@@ -270,41 +306,6 @@ export function SendPanel() {
       disabled: false, 
       action: 'send' 
     };
-  };
-
-  // Helper function to convert address to bytes32 - with validation
-  const addressToBytes32 = (address: string): `0x${string}` => {
-    // Validate input address
-    if (!address || typeof address !== 'string') {
-      throw new Error(`Invalid address: ${address}`);
-    }
-    
-    // Ensure address starts with 0x (preserve original case)
-    const normalizedAddress = address.startsWith('0x') 
-      ? address 
-      : `0x${address}`;
-    
-    // Validate hex format and length (case-insensitive)
-    const hexPattern = /^0x[0-9a-fA-F]{40}$/;
-    if (!hexPattern.test(normalizedAddress)) {
-      console.error('❌ Address validation failed:', {
-        originalAddress: address,
-        normalizedAddress: normalizedAddress,
-        addressLength: normalizedAddress.length,
-        expectedLength: 42, // 0x + 40 hex chars
-        actualHexLength: normalizedAddress.slice(2).length,
-        expectedHexLength: 40,
-        addressChars: normalizedAddress.slice(2).split('')
-      });
-      throw new Error(`Invalid address format: ${address} -> ${normalizedAddress}`);
-    }
-    
-    // Remove 0x prefix and pad to 64 characters (32 bytes) - preserve case
-    const cleanAddress = normalizedAddress.slice(2);
-    const paddedAddress = cleanAddress.padStart(64, '0');
-    
-    // Return as hex string
-    return `0x${paddedAddress}` as `0x${string}`;
   };
 
   // Main send function
