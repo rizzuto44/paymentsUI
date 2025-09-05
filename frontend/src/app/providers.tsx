@@ -6,7 +6,7 @@ import { DynamicContextProvider } from '@dynamic-labs/sdk-react-core';
 import { DynamicWagmiConnector } from '@dynamic-labs/wagmi-connector';
 import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
 import { config } from '@/lib/wagmi';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { baseSepolia, arbitrumSepolia } from 'wagmi/chains';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -17,16 +17,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       },
     },
   }));
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Prevent hydration mismatch by not rendering Web3 providers on server
-  if (!mounted) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
 
   return (
     <DynamicContextProvider

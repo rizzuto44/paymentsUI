@@ -81,6 +81,7 @@ export function SendPanel() {
   
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
+    query: { enabled: !!hash && mounted }
   });
 
   // Get USDT balances on both networks (same as MintPanel)
@@ -88,14 +89,14 @@ export function SendPanel() {
     address,
     token: CONTRACTS.base.USDT_OFT,
     chainId: NETWORK_CONFIG.base.id,
-    query: { enabled: !!address }
+    query: { enabled: !!address && mounted }
   });
 
   const { data: arbitrumBalance } = useBalance({
     address,
     token: CONTRACTS.arbitrum.USDT_OFT,
     chainId: NETWORK_CONFIG.arbitrum.id,
-    query: { enabled: !!address }
+    query: { enabled: !!address && mounted }
   });
 
   // Create token options with balances (same as MintPanel)

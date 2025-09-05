@@ -29,20 +29,20 @@ export function MintPanel() {
   const currentChainId = useChainId();
   const { switchChain } = useSwitchChain();
   const { setShowAuthFlow, handleLogOut } = useDynamicContext();
-
-  // Get USDT balances on both networks
+  
+  // Get USDT balances for both networks
   const { data: baseBalance } = useBalance({
     address,
     token: CONTRACTS.base.USDT_OFT,
     chainId: NETWORK_CONFIG.base.id,
-    query: { enabled: !!address }
+    query: { enabled: !!address && mounted }
   });
 
   const { data: arbitrumBalance } = useBalance({
     address,
     token: CONTRACTS.arbitrum.USDT_OFT,
     chainId: NETWORK_CONFIG.arbitrum.id,
-    query: { enabled: !!address }
+    query: { enabled: !!address && mounted }
   });
 
   // Create token options with balances
@@ -55,7 +55,7 @@ export function MintPanel() {
       icon: '/logos/usdt.svg'
     },
     {
-      id: 'usdt-arbitrum', 
+      id: 'usdt-arbitrum',
       name: 'Tether (Arbitrum)',
       network: 'arbitrum' as ChainKey,
       balance: arbitrumBalance ? formatUnits(arbitrumBalance.value, arbitrumBalance.decimals) : '0',
@@ -66,10 +66,16 @@ export function MintPanel() {
   // Get selected network from token selection
   const selectedNetwork = tokenOptions.find(token => token.id === selectedToken)?.network || 'base';
 
-  const { writeContract, data: hash, error, isPending } = useWriteContract();
+  // Mint transaction
+  const { data: hash, error: writeError, isPending, writeContract } = useWriteContract();
+
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash,
+    query: { enabled: !!hash && mounted }
   });
+
+  // Combined loading state
+  const isMinting = isPending || isConfirming;
 
   useEffect(() => {
     setMounted(true);
@@ -90,9 +96,6 @@ export function MintPanel() {
       maximumFractionDigits: 2 
     });
   };
-
-  // Combined loading state
-  const isMinting = isPending || isConfirming;
 
   // Handle transaction success/error
   useEffect(() => {
@@ -120,12 +123,12 @@ export function MintPanel() {
   }, [isConfirmed, hash, amount, selectedNetwork]);
 
   useEffect(() => {
-    if (error) {
+    if (writeError) {
       toast.error('Transaction failed', {
-        description: error.message || 'Please try again',
+        description: writeError.message || 'Please try again',
       });
     }
-  }, [error]);
+  }, [writeError]);
 
   // Format number with commas for display
   const formatNumber = (value: string) => {
