@@ -4,10 +4,11 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['@dynamic-labs/sdk-react-core', '@dynamic-labs/wagmi-connector']
   },
-  // Fix workspace root warning
-  turbopack: {
-    root: '.'
-  }
+  // Set output file tracing root for Vercel deployment
+  outputFileTracingRoot: require('path').join(__dirname, '../'),
+  // Disable static optimization to prevent SSR issues with Dynamic Labs
+  output: 'standalone',
+  trailingSlash: false
 };
 
 module.exports = nextConfig; 

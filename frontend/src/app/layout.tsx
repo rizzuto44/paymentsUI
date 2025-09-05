@@ -1,42 +1,37 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { Providers } from './providers';
-import { Toaster } from '@/components/ui/sonner';
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import { Providers } from "./providers";
+import { Toaster } from "@/components/ui/sonner";
 
-const inter = Inter({ subsets: ['latin'] });
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: 'OFT Payments',
-  description: 'Cross-chain USDT payments using LayerZero OFT',
+  title: "OFT Payments",
+  description: "Cross-chain USDT transfers using LayerZero OFT",
 };
+
+// Force dynamic rendering to prevent SSR issues with Dynamic Labs
+export const dynamic = 'force-dynamic';
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              // Filter out Chrome extension errors that aren't related to our app
-              const originalError = console.error;
-              console.error = function(...args) {
-                const message = args.join(' ');
-                if (message.includes('chrome.runtime.sendMessage') || 
-                    message.includes('Extension ID')) {
-                  return; // Suppress these specific errors
-                }
-                originalError.apply(console, args);
-              };
-            `,
-          }}
-        />
-      </head>
-      <body className={inter.className}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <Providers>
           {children}
           <Toaster />
