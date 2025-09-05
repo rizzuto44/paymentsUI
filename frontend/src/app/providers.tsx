@@ -6,7 +6,7 @@ import { DynamicContextProvider } from '@dynamic-labs/sdk-react-core';
 import { DynamicWagmiConnector } from '@dynamic-labs/wagmi-connector';
 import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
 import { config } from '@/lib/wagmi';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { baseSepolia, arbitrumSepolia } from 'wagmi/chains';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -17,6 +17,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
       },
     },
   }));
+
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Only render Dynamic Labs on the client side
+  if (!isClient) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <DynamicContextProvider
