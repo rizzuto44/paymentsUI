@@ -198,20 +198,37 @@ export function MintPanel() {
       setShowAuthFlow(true);
     } else if (action === 'switch') {
       const targetChainId = NETWORK_CONFIG[selectedNetwork].id;
-      switchChain({ chainId: targetChainId });
+      try {
+        await switchChain({ chainId: targetChainId });
+        // Wait a moment for the chain to fully switch
+        setTimeout(() => {
+          toast.success(`Switched to ${NETWORK_CONFIG[selectedNetwork].name}`);
+        }, 500);
+      } catch (error) {
+        console.error('Chain switch error:', error);
+        toast.error(`Failed to switch to ${NETWORK_CONFIG[selectedNetwork].name}. Please switch manually in your wallet.`);
+      }
     } else if (action === 'mint') {
       if (!address) return;
+      
+      // Double-check we're on the correct chain before minting
+      const targetChainId = NETWORK_CONFIG[selectedNetwork].id;
+      if (currentChainId !== targetChainId) {
+        toast.error(`Please switch to ${NETWORK_CONFIG[selectedNetwork].name} before minting`);
+        return;
+      }
       
       try {
         // Convert amount to BigInt with proper decimals
         const amountBigInt = parseUnits(amount.replace(/,/g, ''), CONSTANTS.TOKEN.DECIMALS);
         const contractConfig = getContractConfig(selectedNetwork);
         
-        // Call mint function on the contract
+        // Call mint function on the contract with explicit chain context
         writeContract({
           ...contractConfig,
           functionName: 'mint',
           args: [address, amountBigInt],
+          chainId: targetChainId, // Explicitly specify the chain
         });
       } catch (error) {
         console.error('Mint error:', error);
