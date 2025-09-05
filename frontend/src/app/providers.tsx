@@ -32,7 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }));
 
   const [isClient, setIsClient] = useState(false);
-  const [wagmiConfig, setWagmiConfig] = useState<any>(null);
+  const [wagmiConfig, setWagmiConfig] = useState<typeof import('@/lib/wagmi').config | null>(null);
 
   useEffect(() => {
     setIsClient(true);
