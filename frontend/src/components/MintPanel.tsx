@@ -165,6 +165,15 @@ export function MintPanel() {
     }
     
     const targetChainId = NETWORK_CONFIG[selectedNetwork].id;
+    
+    // Debug logging to see what's happening with chain IDs
+    console.log('🔍 Chain Debug:', {
+      currentChainId,
+      targetChainId,
+      selectedNetwork,
+      isEqual: currentChainId === targetChainId
+    });
+    
     if (currentChainId !== targetChainId) {
       return { 
         text: `Switch to ${NETWORK_CONFIG[selectedNetwork].name}`, 
@@ -199,13 +208,16 @@ export function MintPanel() {
     } else if (action === 'switch') {
       const targetChainId = NETWORK_CONFIG[selectedNetwork].id;
       try {
+        console.log('🔄 Attempting to switch chain:', { from: currentChainId, to: targetChainId });
         await switchChain({ chainId: targetChainId });
-        // Wait a moment for the chain to fully switch
+        
+        // Wait a moment for the chain to fully switch and force a re-render
         setTimeout(() => {
+          console.log('✅ Chain switch completed');
           toast.success(`Switched to ${NETWORK_CONFIG[selectedNetwork].name}`);
-        }, 500);
+        }, 1000); // Increased wait time
       } catch (error) {
-        console.error('Chain switch error:', error);
+        console.error('❌ Chain switch error:', error);
         toast.error(`Failed to switch to ${NETWORK_CONFIG[selectedNetwork].name}. Please switch manually in your wallet.`);
       }
     } else if (action === 'mint') {
@@ -213,7 +225,10 @@ export function MintPanel() {
       
       // Double-check we're on the correct chain before minting
       const targetChainId = NETWORK_CONFIG[selectedNetwork].id;
+      console.log('🪙 Mint attempt:', { currentChainId, targetChainId, selectedNetwork });
+      
       if (currentChainId !== targetChainId) {
+        console.log('⚠️ Chain mismatch detected during mint');
         toast.error(`Please switch to ${NETWORK_CONFIG[selectedNetwork].name} before minting`);
         return;
       }
