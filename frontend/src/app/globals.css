@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Import Dynamic Labs CSS for proper modal styling */
+@import "@dynamic-labs/sdk-react-core/lib/dynamic.css";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
