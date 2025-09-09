@@ -412,11 +412,11 @@ export function MintPanel() {
         const amountBigInt = parseUnits(amount.replace(/,/g, ''), CONSTANTS.TOKEN.DECIMALS);
         const contractConfig = getContractConfig(selectedNetwork);
         
-        // Call mint function on the contract with explicit chain context
+        // Call mintForSelf function on the contract with explicit chain context
         writeContract({
           ...contractConfig,
-          functionName: 'mint',
-          args: [address, amountBigInt],
+          functionName: 'mintForSelf',
+          args: [amountBigInt],
           chainId: targetChainId, // Explicitly specify the chain
         });
       } catch (error) {
