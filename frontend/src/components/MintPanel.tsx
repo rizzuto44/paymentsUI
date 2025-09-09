@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,7 +43,7 @@ export function MintPanel() {
   });
 
   // Create token options with balances - only Arbitrum Sepolia
-  const tokenOptions: TokenOption[] = [
+  const tokenOptions: TokenOption[] = useMemo(() => [
     {
       id: 'usdt-arbitrum',
       name: 'Tether (Arbitrum)',
@@ -51,7 +51,7 @@ export function MintPanel() {
       balance: arbitrumBalance ? formatUnits(arbitrumBalance.value, arbitrumBalance.decimals) : '0',
       icon: '/logos/usdt.svg'
     }
-  ];
+  ], [arbitrumBalance]);
 
   // Get selected network from token selection - default to arbitrum
   const selectedNetwork = tokenOptions.find(token => token.id === selectedToken)?.network || 'arbitrum';
@@ -273,83 +273,6 @@ export function MintPanel() {
     }
   };
 
-  // Manual refresh function for debugging
-  const refreshChainId = async () => {
-    console.log('🔄 Refresh button clicked!');
-    console.log('🔄 Current chain ID from useChainId:', currentChainId);
-    console.log('🔄 Actual chain ID state:', actualChainId);
-    console.log('🔄 Wallet client available:', !!walletClient);
-    console.log('🔄 Primary wallet available:', !!primaryWallet);
-    console.log('🔄 Is connected:', isConnected);
-    
-    // Try to get the REAL chain ID from walletClient first (most reliable)
-    if (walletClient) {
-      try {
-        console.log('🔄 Getting REAL chain ID from walletClient...');
-        const realChainId = await walletClient.getChainId();
-        console.log('🔄 Real chain ID from walletClient:', realChainId);
-        setActualChainId(realChainId);
-        toast.success(`Real chain ID: ${realChainId}`);
-        return;
-      } catch (error) {
-        console.error('🔄 Failed to get real chain ID from walletClient:', error);
-      }
-    }
-    
-    // Try to get the REAL chain ID from Dynamic Labs primaryWallet
-    if (primaryWallet) {
-      try {
-        console.log('🔄 Getting REAL chain ID from Dynamic Labs...');
-        
-        // Method 1: Try to get chain ID from the wallet's provider
-        const connector = primaryWallet.connector as any;
-        if (connector && typeof connector.getProvider === 'function') {
-          const provider = connector.getProvider();
-          console.log('🔄 Provider obtained:', provider);
-          const result = await provider.request({ method: 'eth_chainId' });
-          const realChainId = parseInt(result, 16);
-          console.log('🔄 Real chain ID from provider.request():', realChainId);
-          setActualChainId(realChainId);
-          toast.success(`Real chain ID: ${realChainId}`);
-          return;
-        }
-        
-        console.log('🔄 No provider method available');
-      } catch (error) {
-        console.error('🔄 Failed to get real chain ID:', error);
-      }
-    }
-    
-    // Fallback: Force a refresh by setting actualChainId to currentChainId
-    setActualChainId(currentChainId);
-    console.log('🔄 Fallback - Set actualChainId to:', currentChainId);
-    toast.success(`Chain ID refreshed: ${currentChainId}`);
-    
-    // Log the current state for debugging
-    console.log('🔄 Current state after refresh:');
-    console.log('  - currentChainId:', currentChainId);
-    console.log('  - actualChainId:', actualChainId);
-    console.log('  - selectedNetwork:', selectedNetwork);
-    console.log('  - targetChainId:', NETWORK_CONFIG[selectedNetwork].id);
-  };
-
-  // Force refresh after chain switch
-  const forceRefreshAfterSwitch = async () => {
-    console.log('🔄 Force refresh after switch clicked!');
-    if (walletClient) {
-      try {
-        const realChainId = await walletClient.getChainId();
-        console.log('🔄 Force refresh - Real chain ID:', realChainId);
-        setActualChainId(realChainId);
-        toast.success(`Chain refreshed to: ${realChainId}`);
-      } catch (error) {
-        console.error('🔄 Force refresh failed:', error);
-        toast.error('Failed to refresh chain ID');
-      }
-    } else {
-      toast.error('Wallet client not available');
-    }
-  };
 
   // Get button text and state
   const getButtonState = () => {
@@ -430,7 +353,7 @@ export function MintPanel() {
           // Also try primaryWallet as backup
           if (primaryWallet) {
             try {
-              const connector = primaryWallet.connector as any;
+              const connector = primaryWallet.connector as { getProvider?: () => any };
               if (connector && typeof connector.getProvider === 'function') {
                 const provider = connector.getProvider();
                 const result = await provider.request({ method: 'eth_chainId' });
