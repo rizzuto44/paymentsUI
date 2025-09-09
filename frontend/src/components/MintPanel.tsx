@@ -353,7 +353,7 @@ export function MintPanel() {
           // Also try primaryWallet as backup
           if (primaryWallet) {
             try {
-              const connector = primaryWallet.connector as { getProvider?: () => any };
+              const connector = primaryWallet.connector as { getProvider?: () => { request: (params: { method: string }) => Promise<string> } };
               if (connector && typeof connector.getProvider === 'function') {
                 const provider = connector.getProvider();
                 const result = await provider.request({ method: 'eth_chainId' });
