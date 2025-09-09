@@ -42,7 +42,7 @@ export function MintPanel() {
     query: { enabled: !!address && mounted }
   });
 
-  // Create token options with balances - only Arbitrum Sepolia
+  // Create token options with balances - both Arbitrum and Base Sepolia
   const tokenOptions: TokenOption[] = useMemo(() => [
     {
       id: 'usdt-arbitrum',
@@ -50,8 +50,15 @@ export function MintPanel() {
       network: 'arbitrum' as ChainKey,
       balance: arbitrumBalance ? formatUnits(arbitrumBalance.value, arbitrumBalance.decimals) : '0',
       icon: '/logos/usdt.svg'
+    },
+    {
+      id: 'usdt-base',
+      name: 'Tether (Base)',
+      network: 'base' as ChainKey,
+      balance: baseBalance ? formatUnits(baseBalance.value, baseBalance.decimals) : '0',
+      icon: '/logos/usdt.svg'
     }
-  ], [arbitrumBalance]);
+  ], [arbitrumBalance, baseBalance]);
 
   // Get selected network from token selection - default to arbitrum
   const selectedNetwork = tokenOptions.find(token => token.id === selectedToken)?.network || 'arbitrum';
@@ -201,7 +208,7 @@ export function MintPanel() {
     }
   }, [selectedNetwork, isConnected, currentChainId]);
 
-  // Auto-select Arbitrum token (only option)
+  // Auto-select Arbitrum token (default option)
   useEffect(() => {
     if (tokenOptions.length > 0 && !selectedToken) {
       setSelectedToken('usdt-arbitrum');
@@ -468,19 +475,19 @@ export function MintPanel() {
         </Select>
       </div>
 
-      {/* Network Display - Arbitrum Sepolia only */}
+      {/* Network Display - Dynamic based on selected token */}
       <div className="space-y-6">
         <label className="text-sm font-medium text-muted-foreground">
           Testnet
         </label>
         <div className="flex items-center gap-2 h-9 px-3 py-2 border border-input rounded-md">
           <img 
-            src="/logos/arbitrum-sepolia.svg" 
-            alt="Arbitrum Sepolia" 
+            src={selectedNetwork === 'base' ? '/logos/base-sepolia.svg' : '/logos/arbitrum-sepolia.svg'} 
+            alt={selectedNetwork === 'base' ? 'Base Sepolia' : 'Arbitrum Sepolia'}
             className="w-5 h-5" 
           />
           <span className="text-sm">
-            Arbitrum
+            {selectedNetwork === 'base' ? 'Base' : 'Arbitrum'}
           </span>
         </div>
       </div>
