@@ -34,11 +34,19 @@ export function MintPanel() {
   // Get the actual chain ID from the wallet client for more reliable detection
   const [actualChainId, setActualChainId] = useState<number | null>(null);
   
-  // Get USDT balance for Arbitrum Sepolia only
+  // Get USDT balance for Arbitrum Sepolia
   const { data: arbitrumBalance } = useBalance({
     address,
     token: CONTRACTS.arbitrum.USDT_OFT,
     chainId: NETWORK_CONFIG.arbitrum.id,
+    query: { enabled: !!address && mounted }
+  });
+
+  // Get USDT balance for Base Sepolia
+  const { data: baseBalance } = useBalance({
+    address,
+    token: CONTRACTS.base.USDT_OFT,
+    chainId: NETWORK_CONFIG.base.id,
     query: { enabled: !!address && mounted }
   });
 
