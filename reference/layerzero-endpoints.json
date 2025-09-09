@@ -1,0 +1,28 @@
+{
+  "note": "LayerZero V2 Endpoint Configuration for Base Sepolia and Arbitrum Sepolia (Testnet)",
+  "lastUpdated": "2024",
+  "environment": "testnet",
+  "networks": {
+    "base": {
+      "name": "Base Sepolia",
+      "chainId": 84532,
+      "eid": 10247,
+      "endpoint": "0x6EDCE65403992e310A62460808c4b910D972f10f",
+      "description": "Base Sepolia testnet LayerZero V2 endpoint",
+      "rpc": "https://sepolia.base.org"
+    },
+    "arbitrum": {
+      "name": "Arbitrum Sepolia", 
+      "chainId": 421614,
+      "eid": 40231,
+      "endpoint": "0x6EDCE65403992e310A62460808c4b910D972f10f",
+      "description": "Arbitrum Sepolia testnet LayerZero V2 endpoint (same as Base Sepolia)",
+      "rpc": "https://sepolia-rollup.arbitrum.io/rpc"
+    }
+  },
+  "verification": {
+    "status": "✅ Updated for Testnet",
+    "note": "Configuration updated to use Base Sepolia and Arbitrum Sepolia testnets",
+    "source": "LayerZero V2 testnet deployment"
+  }
+} 
