@@ -125,7 +125,7 @@ body {
   }
 }
 
-/* Dynamic Labs Modal Styling */
+/* Dynamic Labs Modal Styling - Fix modal transparency using official CSS variables */
 .dynamic-shadow-dom {
   /* Modal backdrop - keep opaque but not too dark */
   --dynamic-overlay: rgba(0, 0, 0, 0.7) !important;

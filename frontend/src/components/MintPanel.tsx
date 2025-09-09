@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, useBalance } from 'wagmi';
+import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, useBalance, useWalletClient } from 'wagmi';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import { CONSTANTS, NETWORK_CONFIG, CONTRACTS, type ChainKey } from '@/lib/constants';
 import { getContractConfig } from '@/lib/contracts';
@@ -28,16 +28,13 @@ export function MintPanel() {
   const { address, isConnected } = useAccount();
   const currentChainId = useChainId();
   const { switchChain } = useSwitchChain();
-  const { setShowAuthFlow, handleLogOut } = useDynamicContext();
+  const { setShowAuthFlow, handleLogOut, primaryWallet } = useDynamicContext();
+  const { data: walletClient } = useWalletClient();
   
-  // Get USDT balances for both networks
-  const { data: baseBalance } = useBalance({
-    address,
-    token: CONTRACTS.base.USDT_OFT,
-    chainId: NETWORK_CONFIG.base.id,
-    query: { enabled: !!address && mounted }
-  });
-
+  // Get the actual chain ID from the wallet client for more reliable detection
+  const [actualChainId, setActualChainId] = useState<number | null>(null);
+  
+  // Get USDT balance for Arbitrum Sepolia only
   const { data: arbitrumBalance } = useBalance({
     address,
     token: CONTRACTS.arbitrum.USDT_OFT,
@@ -45,15 +42,8 @@ export function MintPanel() {
     query: { enabled: !!address && mounted }
   });
 
-  // Create token options with balances
-  const tokenOptions: TokenOption[] = [
-    {
-      id: 'usdt-base',
-      name: 'Tether (Base)',
-      network: 'base' as ChainKey,
-      balance: baseBalance ? formatUnits(baseBalance.value, baseBalance.decimals) : '0',
-      icon: '/logos/usdt.svg'
-    },
+  // Create token options with balances - only Arbitrum Sepolia
+  const tokenOptions: TokenOption[] = useMemo(() => [
     {
       id: 'usdt-arbitrum',
       name: 'Tether (Arbitrum)',
@@ -61,10 +51,10 @@ export function MintPanel() {
       balance: arbitrumBalance ? formatUnits(arbitrumBalance.value, arbitrumBalance.decimals) : '0',
       icon: '/logos/usdt.svg'
     }
-  ].sort((a, b) => parseFloat(b.balance) - parseFloat(a.balance)); // Sort by balance high to low
+  ], [arbitrumBalance]);
 
-  // Get selected network from token selection
-  const selectedNetwork = tokenOptions.find(token => token.id === selectedToken)?.network || 'base';
+  // Get selected network from token selection - default to arbitrum
+  const selectedNetwork = tokenOptions.find(token => token.id === selectedToken)?.network || 'arbitrum';
 
   // Mint transaction
   const { data: hash, error: writeError, isPending, writeContract } = useWriteContract();
@@ -81,10 +71,140 @@ export function MintPanel() {
     setMounted(true);
   }, []);
 
-  // Auto-select token with highest balance
+  // Get actual chain ID with more aggressive detection
+  useEffect(() => {
+    console.log('🔗 Chain ID changed from useChainId:', currentChainId);
+    
+    // Force refresh the chain ID from wallet if available
+    if (isConnected && walletClient) {
+      const getRealChainId = async () => {
+        try {
+          const realChainId = await walletClient.getChainId();
+          console.log('🔍 Real chain ID from wallet:', realChainId);
+          console.log('🔍 useChainId says:', currentChainId);
+          
+          if (realChainId !== currentChainId) {
+            console.log('⚠️ Chain ID mismatch! Using real chain ID:', realChainId);
+            setActualChainId(realChainId);
+          } else {
+            setActualChainId(currentChainId);
+          }
+        } catch (error) {
+          console.error('Failed to get real chain ID:', error);
+          setActualChainId(currentChainId);
+        }
+      };
+      
+      getRealChainId();
+    } else {
+      setActualChainId(currentChainId);
+    }
+  }, [currentChainId, isConnected, walletClient]);
+
+  // More aggressive chain detection after wallet operations
+  useEffect(() => {
+    if (isConnected && walletClient) {
+      const detectRealChainId = async () => {
+        try {
+          const realChainId = await walletClient.getChainId();
+          console.log('🔍 Real chain ID from walletClient:', realChainId);
+          console.log('🔍 Current useChainId:', currentChainId);
+          
+          if (realChainId !== currentChainId) {
+            console.log('⚠️ Chain ID mismatch detected! Using real chain ID:', realChainId);
+            setActualChainId(realChainId);
+          } else {
+            setActualChainId(currentChainId);
+          }
+        } catch (error) {
+          console.error('Failed to get real chain ID:', error);
+          setActualChainId(currentChainId);
+        }
+      };
+      
+      detectRealChainId();
+    }
+  }, [isConnected, walletClient, currentChainId]);
+
+  // Force refresh when chain switches (workaround for Dynamic Labs caching issue)
+  useEffect(() => {
+    if (isConnected) {
+      const refreshAfterSwitch = () => {
+        console.log('🔄 Chain switch detected, forcing refresh...');
+        // Force a small delay then refresh
+        setTimeout(async () => {
+          console.log('🔄 Refreshing after chain switch...');
+          if (walletClient) {
+            try {
+              const realChainId = await walletClient.getChainId();
+              console.log('🔄 Real chain ID after switch:', realChainId);
+              setActualChainId(realChainId);
+            } catch (error) {
+              console.error('Failed to get real chain ID after switch:', error);
+              setActualChainId(currentChainId);
+            }
+          } else {
+            setActualChainId(currentChainId);
+          }
+        }, 1000); // Increased delay to allow wallet to fully switch
+      };
+      
+      refreshAfterSwitch();
+    }
+  }, [isConnected, currentChainId, walletClient]);
+
+  // Additional aggressive chain detection after switch
+  useEffect(() => {
+    if (isConnected && actualChainId && actualChainId !== currentChainId) {
+      console.log('🔄 Chain mismatch detected, setting up periodic refresh...');
+      
+      // Set up periodic refresh to catch the chain change
+      const interval = setInterval(async () => {
+        if (walletClient) {
+          try {
+            const realChainId = await walletClient.getChainId();
+            console.log('🔄 Periodic check - Real chain ID:', realChainId);
+            if (realChainId !== actualChainId) {
+              console.log('🔄 Chain changed! Updating to:', realChainId);
+              setActualChainId(realChainId);
+              clearInterval(interval);
+            }
+          } catch (error) {
+            console.error('Periodic chain check failed:', error);
+          }
+        }
+      }, 500); // Check every 500ms
+      
+      // Clear interval after 10 seconds
+      setTimeout(() => {
+        clearInterval(interval);
+        console.log('🔄 Stopped periodic chain checking');
+      }, 10000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isConnected, actualChainId, currentChainId, walletClient]);
+
+  // Force refresh chain ID when wallet connects
+  useEffect(() => {
+    if (isConnected) {
+      console.log('🔄 Wallet connected, refreshing chain ID:', currentChainId);
+      setActualChainId(currentChainId);
+    }
+  }, [isConnected, currentChainId]);
+
+  // Force refresh chain ID when selected network changes
+  useEffect(() => {
+    if (isConnected) {
+      console.log('🔄 Network changed, refreshing chain ID:', currentChainId);
+      setActualChainId(currentChainId);
+    }
+  }, [selectedNetwork, isConnected, currentChainId]);
+
+  // Auto-select Arbitrum token (only option)
   useEffect(() => {
     if (tokenOptions.length > 0 && !selectedToken) {
-      setSelectedToken(tokenOptions[0].id);
+      setSelectedToken('usdt-arbitrum');
     }
   }, [tokenOptions, selectedToken]);
 
@@ -100,8 +220,8 @@ export function MintPanel() {
   // Handle transaction success/error
   useEffect(() => {
     if (isConfirmed && hash) {
-      const networkLogo = selectedNetwork === 'base' ? '/logos/base-sepolia.svg' : '/logos/arbitrum-sepolia.svg';
-      const networkName = NETWORK_CONFIG[selectedNetwork].name;
+      const networkLogo = '/logos/arbitrum-sepolia.svg';
+      const networkName = 'Arbitrum Sepolia';
       
       toast.success(`Successfully minted ${formatNumber(amount)} USDT!`, {
         description: (
@@ -113,14 +233,14 @@ export function MintPanel() {
         action: {
           label: 'View',
           onClick: () => {
-            const explorerUrl = NETWORK_CONFIG[selectedNetwork].explorer;
+            const explorerUrl = NETWORK_CONFIG.arbitrum.explorer;
             window.open(`${explorerUrl}/tx/${hash}`, '_blank');
           },
         },
       });
       setAmount(''); // Clear the form
     }
-  }, [isConfirmed, hash, amount, selectedNetwork]);
+  }, [isConfirmed, hash, amount]);
 
   useEffect(() => {
     if (writeError) {
@@ -153,6 +273,7 @@ export function MintPanel() {
     }
   };
 
+
   // Get button text and state
   const getButtonState = () => {
     // Prevent hydration mismatch by showing loading state until mounted
@@ -165,16 +286,19 @@ export function MintPanel() {
     }
     
     const targetChainId = NETWORK_CONFIG[selectedNetwork].id;
+    const effectiveChainId = actualChainId ?? currentChainId;
     
     // Debug logging to see what's happening with chain IDs
     console.log('🔍 Chain Debug:', {
       currentChainId,
+      actualChainId,
+      effectiveChainId,
       targetChainId,
       selectedNetwork,
-      isEqual: currentChainId === targetChainId
+      isEqual: effectiveChainId === targetChainId
     });
     
-    if (currentChainId !== targetChainId) {
+    if (effectiveChainId !== targetChainId) {
       return { 
         text: `Switch to ${NETWORK_CONFIG[selectedNetwork].name}`, 
         disabled: false, 
@@ -212,10 +336,38 @@ export function MintPanel() {
         await switchChain({ chainId: targetChainId });
         
         // Wait a moment for the chain to fully switch and force a re-render
-        setTimeout(() => {
-          console.log('✅ Chain switch completed');
+        setTimeout(async () => {
+          console.log('✅ Chain switch completed, detecting new chain...');
+          
+          // Force detect the new chain ID
+          if (walletClient) {
+            try {
+              const newChainId = await walletClient.getChainId();
+              console.log('🔄 New chain ID detected:', newChainId);
+              setActualChainId(newChainId);
+            } catch (error) {
+              console.error('Failed to detect new chain ID:', error);
+            }
+          }
+          
+          // Also try primaryWallet as backup
+          if (primaryWallet) {
+            try {
+              const connector = primaryWallet.connector as { getProvider?: () => { request: (params: { method: string }) => Promise<string> } };
+              if (connector && typeof connector.getProvider === 'function') {
+                const provider = connector.getProvider();
+                const result = await provider.request({ method: 'eth_chainId' });
+                const newChainId = parseInt(result, 16);
+                console.log('🔄 New chain ID from primaryWallet:', newChainId);
+                setActualChainId(newChainId);
+              }
+            } catch (error) {
+              console.error('PrimaryWallet chain detection failed:', error);
+            }
+          }
+          
           toast.success(`Switched to ${NETWORK_CONFIG[selectedNetwork].name}`);
-        }, 1000); // Increased wait time
+        }, 1500); // Increased wait time to allow wallet to fully switch
       } catch (error) {
         console.error('❌ Chain switch error:', error);
         toast.error(`Failed to switch to ${NETWORK_CONFIG[selectedNetwork].name}. Please switch manually in your wallet.`);
@@ -223,11 +375,33 @@ export function MintPanel() {
     } else if (action === 'mint') {
       if (!address) return;
       
-      // Double-check we're on the correct chain before minting
+      // Get fresh chain ID directly from wallet before minting
       const targetChainId = NETWORK_CONFIG[selectedNetwork].id;
-      console.log('🪙 Mint attempt:', { currentChainId, targetChainId, selectedNetwork });
+      let freshChainId: number;
       
-      if (currentChainId !== targetChainId) {
+      try {
+        // Get the most current chain ID directly from the wallet
+        if (walletClient) {
+          freshChainId = await walletClient.getChainId();
+          console.log('🪙 Fresh chain ID from wallet:', freshChainId);
+        } else {
+          freshChainId = currentChainId;
+          console.log('🪙 Using cached chain ID:', freshChainId);
+        }
+      } catch (error) {
+        console.error('Failed to get fresh chain ID:', error);
+        freshChainId = currentChainId;
+      }
+      
+      console.log('🪙 Mint attempt:', { 
+        currentChainId, 
+        actualChainId, 
+        freshChainId, 
+        targetChainId, 
+        selectedNetwork 
+      });
+      
+      if (freshChainId !== targetChainId) {
         console.log('⚠️ Chain mismatch detected during mint');
         toast.error(`Please switch to ${NETWORK_CONFIG[selectedNetwork].name} before minting`);
         return;
@@ -238,11 +412,11 @@ export function MintPanel() {
         const amountBigInt = parseUnits(amount.replace(/,/g, ''), CONSTANTS.TOKEN.DECIMALS);
         const contractConfig = getContractConfig(selectedNetwork);
         
-        // Call mint function on the contract with explicit chain context
+        // Call mintForSelf function on the contract with explicit chain context
         writeContract({
           ...contractConfig,
-          functionName: 'mint',
-          args: [address, amountBigInt],
+          functionName: 'mintForSelf',
+          args: [amountBigInt],
           chainId: targetChainId, // Explicitly specify the chain
         });
       } catch (error) {
@@ -294,19 +468,19 @@ export function MintPanel() {
         </Select>
       </div>
 
-      {/* Network Display - Auto-determined by token selection */}
+      {/* Network Display - Arbitrum Sepolia only */}
       <div className="space-y-6">
         <label className="text-sm font-medium text-muted-foreground">
           Testnet
         </label>
         <div className="flex items-center gap-2 h-9 px-3 py-2 border border-input rounded-md">
           <img 
-            src={selectedNetwork === 'base' ? '/logos/base-sepolia.svg' : '/logos/arbitrum-sepolia.svg'} 
-            alt={selectedNetwork === 'base' ? 'Base Sepolia' : 'Arbitrum Sepolia'} 
+            src="/logos/arbitrum-sepolia.svg" 
+            alt="Arbitrum Sepolia" 
             className="w-5 h-5" 
           />
           <span className="text-sm">
-            {selectedNetwork === 'base' ? 'Base' : 'Arbitrum'}
+            Arbitrum
           </span>
         </div>
       </div>
@@ -354,7 +528,7 @@ export function MintPanel() {
       </div>
 
       {/* CTA Button - Fixed at bottom */}
-      <div className="mt-auto">
+      <div className="mt-auto space-y-2">
         <Button 
           className={`w-full font-medium border border-input ${
             buttonState.text === 'Mint' 
