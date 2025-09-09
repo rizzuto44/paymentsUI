@@ -124,3 +124,57 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Dynamic Labs Modal Styling */
+.dynamic-shadow-dom {
+  /* Modal backdrop - keep opaque but not too dark */
+  --dynamic-overlay: rgba(0, 0, 0, 0.7) !important;
+  --dynamic-modal-backdrop-background: rgba(0, 0, 0, 0.7) !important;
+  --dynamic-modal-backdrop-filter: blur(8px) !important;
+  
+  /* Modal sizing and spacing - make it more spacious */
+  --dynamic-modal-width: 24rem !important;
+  --dynamic-modal-padding: 2rem !important;
+  --dynamic-border-radius: 16px !important;
+  
+  /* Base colors - lighter and more readable */
+  --dynamic-base-1: #1e1e2e !important;
+  --dynamic-base-2: #2a2a3a !important;
+  --dynamic-base-3: #3a3a4a !important;
+  --dynamic-base-4: #4a4a5a !important;
+  --dynamic-base-5: #5a5a6a !important;
+  
+  /* Text colors - better contrast */
+  --dynamic-text-primary: #ffffff !important;
+  --dynamic-text-secondary: #e8e8e8 !important;
+  --dynamic-text-tertiary: #b8b8b8 !important;
+  
+  /* Wallet list - more spacious */
+  --dynamic-wallet-list-tile-padding: 1rem !important;
+  --dynamic-wallet-list-tile-gap: 0.75rem !important;
+  --dynamic-wallet-list-max-height: 20rem !important;
+  --dynamic-wallet-list-tile-background: #2a2a3a !important;
+  --dynamic-wallet-list-tile-background-hover: #3a3a4a !important;
+  --dynamic-wallet-list-tile-border: 1px solid #4a4a5a !important;
+  --dynamic-wallet-list-tile-border-hover: 1px solid #5a5a6a !important;
+  
+  /* Search bar - more spacious */
+  --dynamic-search-bar-background: #2a2a3a !important;
+  --dynamic-search-bar-background-hover: #3a3a4a !important;
+  --dynamic-search-bar-background-focus: #3a3a4a !important;
+  --dynamic-search-bar-border: 1px solid #4a4a5a !important;
+  --dynamic-search-bar-border-hover: 1px solid #5a5a6a !important;
+  --dynamic-search-bar-border-focus: 1px solid #6a6a7a !important;
+  
+  /* Footer - more spacing */
+  --dynamic-footer-padding: 1.5rem 2rem 2rem 2rem !important;
+  --dynamic-footer-background-color: #1e1e2e !important;
+  --dynamic-footer-text-color: #b8b8b8 !important;
+  
+  /* Button styling */
+  --dynamic-connect-button-background: #4a4a5a !important;
+  --dynamic-connect-button-color: #ffffff !important;
+  --dynamic-connect-button-border: 1px solid #6a6a7a !important;
+  --dynamic-connect-button-background-hover: #5a5a6a !important;
+  --dynamic-connect-button-border-hover: 1px solid #7a7a8a !important;
+}

@@ -77,6 +77,20 @@ export const MyOFTABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   },
+  // Public mint function for users
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "mintForSelf",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
   // OFT Cross-chain functions
   {
     "inputs": [
